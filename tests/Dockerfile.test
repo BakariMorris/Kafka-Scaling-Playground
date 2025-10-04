@@ -1,0 +1,20 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    wait-for-it \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy test files
+COPY . .
+
+# Wait for services to be ready before running tests
+CMD ["sh", "-c", "wait-for-it kafka-test:29092 -t 60 && wait-for-it elasticsearch-test:9200 -t 60 && wait-for-it flink-jobmanager-test:8081 -t 60 && python -m pytest /app/integration/ -v"]
